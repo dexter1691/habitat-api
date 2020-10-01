@@ -9,8 +9,8 @@ from habitat.core.registry import registry
 from habitat.datasets.eqa import _try_register_mp3d_eqa_dataset
 from habitat.datasets.object_nav import _try_register_objectnavdatasetv1
 from habitat.datasets.pointnav import _try_register_pointnavdatasetv1
-from habitat.datasets.vln import _try_register_r2r_vln_dataset
 from habitat.datasets.rearrangement import _try_register_rearrangement_dataset
+from habitat.datasets.vln import _try_register_r2r_vln_dataset
 
 
 def make_dataset(id_dataset, **kwargs):

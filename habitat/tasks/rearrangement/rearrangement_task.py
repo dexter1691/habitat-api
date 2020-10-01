@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 import os
 from typing import Any, Dict, List, Type
 
@@ -15,11 +14,16 @@ from gym import spaces
 
 from habitat.config.default import Config
 from habitat.core.dataset import Episode
-from habitat.core.embodied_task import EmbodiedTask, Measure, SimulatorTaskAction
+from habitat.core.embodied_task import (
+    EmbodiedTask,
+    Measure,
+    SimulatorTaskAction,
+)
 from habitat.core.registry import registry
 from habitat.core.simulator import Observations, Sensor, SensorTypes, Simulator
 from habitat.core.utils import not_none_validator
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
+from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 from habitat.sims.rearrangement.actions import raycast
 from habitat.sims.rearrangement.rearrangement_simulator import RearrangementSim
 from habitat.tasks.nav.nav import (
@@ -105,7 +109,12 @@ class ObjectToGoalDistance(Measure):
     cls_uuid: str = "object_to_goal_distance"
 
     def __init__(
-        self, sim: Simulator, config: Config, task: EmbodiedTask, *args: Any, **kwargs: Any
+        self,
+        sim: Simulator,
+        config: Config,
+        task: EmbodiedTask,
+        *args: Any,
+        **kwargs: Any
     ):
         self._sim = sim
         self._config = config
@@ -154,7 +163,12 @@ class AgentToObjectDistance(Measure):
     cls_uuid: str = "agent_to_object_distance"
 
     def __init__(
-        self, sim: Simulator, config: Config, task: EmbodiedTask, *args: Any, **kwargs: Any
+        self,
+        sim: Simulator,
+        config: Config,
+        task: EmbodiedTask,
+        *args: Any,
+        **kwargs: Any
     ):
         self._sim = sim
         self._config = config
@@ -176,7 +190,9 @@ class AgentToObjectDistance(Measure):
 
     def update_metric(self, episode, *args: Any, **kwargs: Any):
         distance_to_target = {}
-        for _, sim_obj_id in enumerate(self._sim.get_existing_object_ids()[1:]):
+        for _, sim_obj_id in enumerate(
+            self._sim.get_existing_object_ids()[1:]
+        ):
             obj_id = self._task.sim_object_to_objid_mapping[sim_obj_id]
             previous_position = np.array(
                 self._sim.get_translation(sim_obj_id)
@@ -194,7 +210,12 @@ class AgentToObjectDistance(Measure):
 @registry.register_sensor
 class GrippedObjectSensor(Sensor):
     def __init__(
-        self, *args: Any, sim: Simulator, config: Config, task: EmbodiedTask, **kwargs: Any
+        self,
+        *args: Any,
+        sim: Simulator,
+        config: Config,
+        task: EmbodiedTask,
+        **kwargs: Any
     ):
         self._sim = sim
         self._task = task
@@ -225,7 +246,12 @@ class GrippedObjectSensor(Sensor):
 @registry.register_sensor
 class AllObjectPositions(PointGoalSensor):
     def __init__(
-        self, sim: Simulator, config: Config, task: EmbodiedTask, *args: Any, **kwargs: Any
+        self,
+        sim: Simulator,
+        config: Config,
+        task: EmbodiedTask,
+        *args: Any,
+        **kwargs: Any
     ):
         super().__init__(sim, config, *args, **kwargs)
         self._task = task
@@ -254,7 +280,9 @@ class AllObjectPositions(PointGoalSensor):
         rotation_world_agent = agent_state.rotation
         sensor_data = np.zeros((5, 2))
 
-        for _, sim_obj_id in enumerate(self._sim.get_existing_object_ids()[1:]):
+        for _, sim_obj_id in enumerate(
+            self._sim.get_existing_object_ids()[1:]
+        ):
             obj_id = self._task.sim_object_to_objid_mapping[sim_obj_id]
             object_position = self._sim.get_translation(sim_obj_id)
             sensor_data[obj_id] = self._compute_pointgoal(
@@ -267,7 +295,12 @@ class AllObjectPositions(PointGoalSensor):
 @registry.register_sensor
 class AllObjectGoals(PointGoalSensor):
     def __init__(
-        self, sim: Simulator, config: Config, task: EmbodiedTask, *args: Any, **kwargs: Any
+        self,
+        sim: Simulator,
+        config: Config,
+        task: EmbodiedTask,
+        *args: Any,
+        **kwargs: Any
     ):
         super().__init__(sim, config, *args, **kwargs)
         self._task = task
@@ -411,9 +444,9 @@ class RearrangementTask(NavigationTask):
         if len(existing_object_ids) > 0:
             for obj_id in existing_object_ids:
                 self._sim.remove_object(obj_id)
-        
+
         # add agent object
-        object_handle = obj_attr_mgr.get_file_template_handles('sphere')[0]
+        object_handle = obj_attr_mgr.get_file_template_handles("sphere")[0]
         for old_obj_id in self._sim.get_existing_object_ids()[1:]:
             self._sim.remove_object(old_obj_id)
         self.agent_object_id = self._sim.add_object_by_handle(object_handle)

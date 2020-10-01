@@ -10,6 +10,7 @@ from habitat.sims.habitat_simulator import _try_register_habitat_sim
 from habitat.sims.pyrobot import _try_register_pyrobot
 from habitat.sims.rearrangement import _try_register_rearrangement_sim
 
+
 def make_sim(id_sim, **kwargs):
     logger.info("initializing sim {}".format(id_sim))
     _sim = registry.get_simulator(id_sim)

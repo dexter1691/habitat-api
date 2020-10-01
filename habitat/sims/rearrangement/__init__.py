@@ -13,6 +13,7 @@ def _try_register_rearrangement_sim():
 
     except ImportError as e:
         habitat_sim_import_error = e
+
         @registry.register_simulator(name="RearrangementSim-v0")
         class HabitatSimImportError(Simulator):
             def __init__(self, *args, **kwargs):

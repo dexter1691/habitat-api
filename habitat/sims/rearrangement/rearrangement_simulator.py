@@ -62,7 +62,7 @@ class RearrangementSim(HabitatSim):
             agent.controls.action(
                 v.object, action.name, action.actuation, apply_filter=False
             )
-        
+
     def reset(self):
         sim_obs = super().reset()
 
