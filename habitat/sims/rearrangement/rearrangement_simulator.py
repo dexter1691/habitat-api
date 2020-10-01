@@ -48,6 +48,7 @@ class RearrangementSim(HabitatSim):
         Returns:
             rendered frame according to the mode
         """
+        print("rotating agent!")
         agent = self.get_agent(self.agent_id)
 
         for _, v in agent._sensors.items():
@@ -61,7 +62,7 @@ class RearrangementSim(HabitatSim):
             agent.controls.action(
                 v.object, action.name, action.actuation, apply_filter=False
             )
-
+        
     def reset(self):
         sim_obs = super().reset()
 
