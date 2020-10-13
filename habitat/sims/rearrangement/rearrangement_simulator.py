@@ -31,10 +31,9 @@ class RearrangementSim(HabitatSim):
         self.navmesh_settings.set_defaults()
         self.navmesh_settings.agent_radius = agent_config.RADIUS
         self.navmesh_settings.agent_height = agent_config.HEIGHT
-
+        self.navmesh_settings.agent_max_climb = agent_config.MAX_CLIMB
+        self.agent_object_id = 0
         self._prev_sim_obs = {}
-        self.sim_object_to_objid_mapping = {}
-        self.objid_to_sim_object_mapping = {}
 
     def reconfigure(self, config: Config) -> None:
         super().reconfigure(config)
@@ -48,7 +47,6 @@ class RearrangementSim(HabitatSim):
         Returns:
             rendered frame according to the mode
         """
-        print("rotating agent!")
         agent = self.get_agent(self.agent_id)
 
         for _, v in agent._sensors.items():
@@ -75,7 +73,11 @@ class RearrangementSim(HabitatSim):
         self._prev_sim_obs["collided"] = False
         self.did_reset = True
         self.grip_offset = np.eye(4)
+
         return self._sensor_suite.get_observations(sim_obs)
+
+    def _sync_agent(self):
+        self.set_translation(self._last_state.position, self.agent_object_id)
 
     def _sync_gripped_object(self, gripped_object_id):
         r"""
@@ -107,6 +109,7 @@ class RearrangementSim(HabitatSim):
         super().step_world(dt)
 
         # Sync the gripped object after the agent moves.
+        self._sync_agent()
         self._sync_gripped_object(self._prev_sim_obs["gripped_object_id"])
 
         # obtain observations

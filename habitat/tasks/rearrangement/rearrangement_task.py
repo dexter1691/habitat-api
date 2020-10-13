@@ -12,6 +12,7 @@ import attr
 import numpy as np
 from gym import spaces
 
+import habitat_sim
 from habitat.config.default import Config
 from habitat.core.dataset import Episode
 from habitat.core.embodied_task import (
@@ -140,7 +141,10 @@ class ObjectToGoalDistance(Measure):
     def update_metric(self, episode, *args: Any, **kwargs: Any):
         distance_to_target = {}
 
-        for sim_obj_id in self._sim.get_existing_object_ids()[1:]:
+        for sim_obj_id in self._sim.get_existing_object_ids():
+            if sim_obj_id == self._task.agent_object_id:
+                continue
+
             obj_id = self._task.sim_object_to_objid_mapping[sim_obj_id]
 
             previous_position = np.array(
@@ -190,9 +194,9 @@ class AgentToObjectDistance(Measure):
 
     def update_metric(self, episode, *args: Any, **kwargs: Any):
         distance_to_target = {}
-        for _, sim_obj_id in enumerate(
-            self._sim.get_existing_object_ids()[1:]
-        ):
+        for _, sim_obj_id in enumerate(self._sim.get_existing_object_ids()):
+            if sim_obj_id == self._task.agent_object_id:
+                continue
             obj_id = self._task.sim_object_to_objid_mapping[sim_obj_id]
             previous_position = np.array(
                 self._sim.get_translation(sim_obj_id)
@@ -280,9 +284,10 @@ class AllObjectPositions(PointGoalSensor):
         rotation_world_agent = agent_state.rotation
         sensor_data = np.zeros((5, 2))
 
-        for _, sim_obj_id in enumerate(
-            self._sim.get_existing_object_ids()[1:]
-        ):
+        for _, sim_obj_id in enumerate(self._sim.get_existing_object_ids()):
+            if sim_obj_id == self._task.agent_object_id:
+                continue
+
             obj_id = self._task.sim_object_to_objid_mapping[sim_obj_id]
             object_position = self._sim.get_translation(sim_obj_id)
             sensor_data[obj_id] = self._compute_pointgoal(
@@ -329,11 +334,16 @@ class AllObjectGoals(PointGoalSensor):
         agent_position = agent_state.position
         rotation_world_agent = agent_state.rotation
 
-        for i, _ in enumerate(self._sim.get_existing_object_ids()[1:]):
+        for _, sim_obj_id in enumerate(self._sim.get_existing_object_ids()):
+            if sim_obj_id == self._task.agent_object_id:
+                continue
+
+            obj_id = self._task.sim_object_to_objid_mapping[sim_obj_id]
+
             goal_position = np.array(
-                episode.goals[i].position, dtype=np.float32
+                episode.goals[obj_id].position, dtype=np.float32
             )
-            sensor_data[i] = self._compute_pointgoal(
+            sensor_data[obj_id] = self._compute_pointgoal(
                 agent_position, rotation_world_agent, goal_position
             )
 
@@ -399,6 +409,8 @@ class GrabOrReleaseAction(SimulatorTaskAction):
         super().step_world(1 / 60.0)
 
         # Sync the gripped object after the agent moves.
+        self._sim._sync_agent()
+        print("Syncing agent's object!")
         self._sim._sync_gripped_object(gripped_object_id)
 
         # obtain observations
@@ -447,9 +459,9 @@ class RearrangementTask(NavigationTask):
 
         # add agent object
         object_handle = obj_attr_mgr.get_file_template_handles("sphere")[0]
-        for old_obj_id in self._sim.get_existing_object_ids()[1:]:
-            self._sim.remove_object(old_obj_id)
         self.agent_object_id = self._sim.add_object_by_handle(object_handle)
+        self._sim.agent_object_id = self.agent_object_id
+        self._sim.set_translation(episode.start_position, self.agent_object_id)
 
         self.sim_object_to_objid_mapping = {}
         self.objid_to_sim_object_mapping = {}
@@ -469,6 +481,14 @@ class RearrangementTask(NavigationTask):
             object_rot = quat_to_magnum(object_rot)
             self._sim.set_rotation(object_rot, object_id)
             self._sim.set_object_motion_type(MotionType.STATIC, object_id)
+
+        # Recompute a base navmesh without objects
+        self._simple_pathfinder = habitat_sim.PathFinder()
+        name, ext = os.path.splitext(episode.scene_id)
+        self._simple_pathfinder.load_nav_mesh(name + ".navmesh")
+        self._sim.recompute_navmesh(
+            self._simple_pathfinder, self._sim.navmesh_settings, False
+        )
 
         # Recompute the navmesh after placing all the objects.
         self._sim.recompute_navmesh(

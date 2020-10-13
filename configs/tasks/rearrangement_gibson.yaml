@@ -3,7 +3,7 @@ ENVIRONMENT:
 
 SIMULATOR:
   TYPE: "RearrangementSim-v0"
-  TURN_ANGLE: 30
+  TURN_ANGLE: 10
   TILT_ANGLE: 30
   INITIAL_LOOK_DOWN_ANGLE: 30
   ACTION_SPACE_CONFIG: "RearrangementActions-v0"
@@ -11,22 +11,23 @@ SIMULATOR:
     SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR']
     HEIGHT: 0.88
     RADIUS: 0.18
+    MAX_CLIMB: 0.1
   HABITAT_SIM_V0:
     GPU_DEVICE_ID: 0
   SEMANTIC_SENSOR:
     WIDTH: 640
     HEIGHT: 480
-    HFOV: 79
+    HFOV: 90
     POSITION: [0, 0.88, 0]
   RGB_SENSOR:
     WIDTH: 640
     HEIGHT: 480
-    HFOV: 79
+    HFOV: 90
     POSITION: [0, 0.88, 0]
   DEPTH_SENSOR:
     WIDTH: 640
     HEIGHT: 480
-    HFOV: 79
+    HFOV: 90
     MIN_DEPTH: 0.5
     MAX_DEPTH: 5.0
     POSITION: [0, 0.88, 0]
@@ -46,9 +47,12 @@ TASK:
     SUCCESS_DISTANCE: 0.2
   DISTANCE_TO_GOAL:
     DISTANCE_TO: VIEW_POINTS
+  TOP_DOWN_MAP:
+    MAP_RESOLUTION: 256
+
 
 DATASET:
   TYPE: RearrangementDataset-v0
   SPLIT: train
-  CONTENT_SCENES: ["rearrangement_obj_5_scene_28_episode_1_gibson"]
+  CONTENT_SCENES: ["rearrangement_v1_train_n=1000_o=5_Montreal"]
   DATA_PATH: "data/datasets/rearrangement/gibson/v1/{split}/{split}.json.gz"
