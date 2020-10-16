@@ -82,6 +82,7 @@ def bresenham_supercover_line(pt1, pt2):
 def draw_fog_of_war_line(top_down_map, fog_of_war_mask, pt1, pt2):
     r"""Draws a line on the fog_of_war_mask mask between pt1 and pt2"""
 
+    count = 0
     for pt in bresenham_supercover_line(pt1, pt2):
         x, y = pt
 
@@ -92,9 +93,12 @@ def draw_fog_of_war_line(top_down_map, fog_of_war_mask, pt1, pt2):
             break
 
         if top_down_map[x, y] == maps.MAP_INVALID_POINT:
-            break
-
-        fog_of_war_mask[x, y] = 1
+            fog_of_war_mask[x, y] = 2
+            count +=1
+            if count >= 5:
+                break
+        else:
+            fog_of_war_mask[x, y] = 1
 
 
 @numba.jit(nopython=True)
