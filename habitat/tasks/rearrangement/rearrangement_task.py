@@ -6,7 +6,8 @@
 
 
 import os
-from typing import Any, Dict, List, Type
+from collections import defaultdict
+from typing import Any, Dict, List, Type, Union
 
 import attr
 import numpy as np
@@ -58,6 +59,23 @@ def merge_sim_episode_with_object_config(
     return sim_config
 
 
+def geodesic_distance(pathfinder, position_a, position_b):
+    path = habitat_sim.MultiGoalShortestPath()
+    path.requested_start = np.array(position_a, dtype=np.float32)
+    if isinstance(position_b[0], List) or isinstance(
+        position_b[0], np.ndarray
+    ):
+        path.requested_ends = np.array(position_b, dtype=np.float32)
+    else:
+        path.requested_ends = np.array(
+            [np.array(position_b, dtype=np.float32)]
+        )
+
+    pathfinder.find_path(path)
+
+    return path.geodesic_distance
+
+
 @attr.s(auto_attribs=True, kw_only=True)
 class RearrangementSpec:
     r"""Specifications that capture the initial or final pose of the object."""
@@ -92,7 +110,6 @@ class RearrangementEpisode(NavigationEpisode):
             orientation.
         goals: list of goals specifications
         objects: list of object initial spawn location and orientation.
-        object_templates: list of all object templates used in this dataset.
     """
 
     objects: List[RearrangementObjectSpec] = attr.ib(
@@ -100,6 +117,17 @@ class RearrangementEpisode(NavigationEpisode):
     )
     goals: List[RearrangementSpec] = attr.ib(
         default=None, validator=not_none_validator
+    )
+    pickup_order: List[int] = attr.ib(
+        default=None
+    )
+
+    pickup_order_tdmap: List[int] = attr.ib(
+        default=None
+    )
+
+    pickup_order_l2dist: List[int] = attr.ib(
+        default=None
     )
 
 
@@ -153,8 +181,8 @@ class ObjectToGoalDistance(Measure):
 
             goal_position = episode.goals[obj_id].position
 
-            distance_to_target[obj_id] = self._euclidean_distance(
-                previous_position, goal_position
+            distance_to_target[obj_id] = geodesic_distance(
+                self._task._simple_pathfinder, previous_position, goal_position
             )
 
         self._metric = distance_to_target
@@ -204,8 +232,8 @@ class AgentToObjectDistance(Measure):
             agent_state = self._sim.get_agent_state()
             agent_position = agent_state.position
 
-            distance_to_target[obj_id] = self._euclidean_distance(
-                previous_position, agent_position
+            distance_to_target[obj_id] = geodesic_distance(
+                self._task._simple_pathfinder, previous_position, agent_position
             )
 
         self._metric = distance_to_target
@@ -431,6 +459,8 @@ class RearrangementTask(NavigationTask):
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
+        self._episode_was_reset = False
+        self.misc_dict = defaultdict()
 
     def register_object_templates(self):
         r"""
@@ -497,9 +527,18 @@ class RearrangementTask(NavigationTask):
 
     def reset(self, episode: Episode):
         self._initialize_objects(episode)
+        self._episode_was_reset = True
+        self.misc_dict = {}
         return super().reset(episode)
+    
+    def step(self, action: Union[int, Dict[str, Any]], episode: Type[Episode]):
+        self._episode_was_reset = False
+        return super().step(action, episode)
 
     def overwrite_sim_config(self, sim_config, episode):
         sim_config = super().overwrite_sim_config(sim_config, episode)
         self.register_object_templates()
         return sim_config
+    
+    def did_episode_reset(self, *args: Any, **kwargs: Any) -> bool:
+        return self._episode_was_reset

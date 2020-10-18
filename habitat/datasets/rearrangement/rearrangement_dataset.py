@@ -42,6 +42,7 @@ class RearrangementDatasetV0(PointNavDatasetV1):
 
         if "object_templates" in deserialized:
             self.object_templates = deserialized["object_templates"]
+        
         # self.object_templates = deserialized['object_templates']
         for i, episode in enumerate(deserialized["episodes"]):
             episode_obj = RearrangementEpisode(**episode)
@@ -66,5 +67,6 @@ class RearrangementDatasetV0(PointNavDatasetV1):
 
             for i, goal in enumerate(episode_obj.goals):
                 episode_obj.goals[i] = RearrangementSpec(**goal)
+                
 
             self.episodes.append(episode_obj)
