@@ -385,7 +385,7 @@ class GrabOrReleaseAction(SimulatorTaskAction):
         r"""This method is called from ``Env`` on each ``step``."""
 
         gripped_object_id = self._sim._prev_sim_obs["gripped_object_id"]
-        agent_config = self._default_agent.agent_config
+        agent_config = self._sim._default_agent.agent_config
         action_spec = agent_config.action_space[HabitatSimActions.GRAB_RELEASE]
 
         # If already holding an agent
@@ -434,11 +434,11 @@ class GrabOrReleaseAction(SimulatorTaskAction):
                 )
 
         # step physics by dt
-        super().step_world(1 / 60.0)
+        # self._sim.step_world(1 / 60.0)
 
         # Sync the gripped object after the agent moves.
         self._sim._sync_agent()
-        print("Syncing agent's object!")
+        # print("Syncing agent's object!")
         self._sim._sync_gripped_object(gripped_object_id)
 
         # obtain observations
@@ -475,6 +475,11 @@ class RearrangementTask(NavigationTask):
             obj_template.scale = np.array(template_info["scale"])
             obj_attr_mgr.register_template(obj_template)
 
+        obj_handle = obj_attr_mgr.get_file_template_handles("sphere")[0]
+        obj_template = obj_attr_mgr.get_template_by_handle(obj_handle)
+        obj_template.scale = np.array([0.8, 0.8, 0.8])
+        obj_attr_mgr.register_template(obj_template)
+
     def _initialize_objects(self, episode: RearrangementEpisode):
         r"""
         Initialize the stage with the objects in the episode.
@@ -489,6 +494,7 @@ class RearrangementTask(NavigationTask):
 
         # add agent object
         object_handle = obj_attr_mgr.get_file_template_handles("sphere")[0]
+
         self.agent_object_id = self._sim.add_object_by_handle(object_handle)
         self._sim.agent_object_id = self.agent_object_id
         self._sim.set_translation(episode.start_position, self.agent_object_id)
@@ -530,7 +536,7 @@ class RearrangementTask(NavigationTask):
         self._episode_was_reset = True
         self.misc_dict = {}
         return super().reset(episode)
-    
+
     def step(self, action: Union[int, Dict[str, Any]], episode: Type[Episode]):
         self._episode_was_reset = False
         return super().step(action, episode)
@@ -539,6 +545,6 @@ class RearrangementTask(NavigationTask):
         sim_config = super().overwrite_sim_config(sim_config, episode)
         self.register_object_templates()
         return sim_config
-    
+
     def did_episode_reset(self, *args: Any, **kwargs: Any) -> bool:
         return self._episode_was_reset
