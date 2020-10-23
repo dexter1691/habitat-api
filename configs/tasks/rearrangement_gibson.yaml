@@ -55,6 +55,6 @@ TASK:
 
 DATASET:
   TYPE: RearrangementDataset-v0
-  SPLIT: test
+  SPLIT: train
   CONTENT_SCENES: ["*"]
   DATA_PATH: "data/datasets/rearrangement/gibson/v1/{split}/{split}.json.gz"

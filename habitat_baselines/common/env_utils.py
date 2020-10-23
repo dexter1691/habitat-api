@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import random
+import numpy as np
 from typing import Type, Union
 
 import habitat
@@ -25,29 +26,30 @@ def make_env_fn(
     Returns:
         env object created according to specification.
     """
+
     dataset = make_dataset(
         config.TASK_CONFIG.DATASET.TYPE, config=config.TASK_CONFIG.DATASET
     )
+
     env = env_class(config=config, dataset=dataset)
     env.seed(config.TASK_CONFIG.SEED)
     return env
 
 
 def construct_envs(
-    config: Config,
-    env_class: Type[Union[Env, RLEnv]],
-    workers_ignore_signals: bool = False,
+    config: Config, env_class: Type[Union[Env, RLEnv]]
 ) -> VectorEnv:
     r"""Create VectorEnv object with specified config and env class type.
     To allow better performance, dataset are split into small ones for
     each individual env, grouped by scenes.
 
-    :param config: configs that contain num_processes as well as information
-    :param necessary to create individual environments.
-    :param env_class: class type of the envs to be created.
-    :param workers_ignore_signals: Passed to :ref:`habitat.VectorEnv`'s constructor
+    Args:
+        config: configs that contain num_processes as well as information
+        necessary to create individual environments.
+        env_class: class type of the envs to be created.
 
-    :return: VectorEnv object created according to specification.
+    Returns:
+        VectorEnv object created according to specification.
     """
 
     num_processes = config.NUM_PROCESSES
@@ -65,10 +67,12 @@ def construct_envs(
             )
 
         if len(scenes) < num_processes:
-            raise RuntimeError(
-                "reduce the number of processes as there "
-                "aren't enough number of scenes"
-            )
+            # raise RuntimeError(
+            #     "reduce the number of processes as there "
+            #     "aren't enough number of scenes"
+            # )
+
+            scenes = scenes * num_processes
 
         random.shuffle(scenes)
 
@@ -88,17 +92,30 @@ def construct_envs(
             task_config.DATASET.CONTENT_SCENES = scene_splits[i]
 
         task_config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = (
-            config.SIMULATOR_GPU_ID
+            config.SIMULATOR_GPU_ID[i % len(config.SIMULATOR_GPU_ID)]
         )
 
         task_config.SIMULATOR.AGENT_0.SENSORS = config.SENSORS
+        
+        # Set the seed for the environment iterator before it's initialized in env.
+        task_config.ENVIRONMENT.ITERATOR_OPTIONS.SEED = (
+            config.TASK_CONFIG.SEED + i
+        )
 
         proc_config.freeze()
         configs.append(proc_config)
 
+    # envs = habitat.ThreadedVectorEnv(
+    #     make_env_fn=make_env_fn,
+    #     env_fn_args=tuple(
+    #         tuple(zip(configs, env_classes))
+    #     ),
+    # )
+
     envs = habitat.VectorEnv(
         make_env_fn=make_env_fn,
-        env_fn_args=tuple(zip(configs, env_classes)),
-        workers_ignore_signals=workers_ignore_signals,
+        env_fn_args=tuple(
+            tuple(zip(configs, env_classes))
+        ),
     )
     return envs

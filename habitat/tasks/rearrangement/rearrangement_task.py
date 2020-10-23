@@ -168,6 +168,8 @@ class ObjectToGoalDistance(Measure):
 
     def update_metric(self, episode, *args: Any, **kwargs: Any):
         distance_to_target = {}
+        agent_state = self._sim.get_agent_state()
+        agent_position = agent_state.position
 
         for sim_obj_id in self._sim.get_existing_object_ids():
             if sim_obj_id == self._task.agent_object_id:
@@ -180,6 +182,7 @@ class ObjectToGoalDistance(Measure):
             ).tolist()
 
             goal_position = episode.goals[obj_id].position
+            previous_position[1] = agent_position[1]
 
             distance_to_target[obj_id] = geodesic_distance(
                 self._task._simple_pathfinder, previous_position, goal_position
@@ -222,6 +225,9 @@ class AgentToObjectDistance(Measure):
 
     def update_metric(self, episode, *args: Any, **kwargs: Any):
         distance_to_target = {}
+        agent_state = self._sim.get_agent_state()
+        agent_position = agent_state.position
+
         for _, sim_obj_id in enumerate(self._sim.get_existing_object_ids()):
             if sim_obj_id == self._task.agent_object_id:
                 continue
@@ -229,8 +235,7 @@ class AgentToObjectDistance(Measure):
             previous_position = np.array(
                 self._sim.get_translation(sim_obj_id)
             ).tolist()
-            agent_state = self._sim.get_agent_state()
-            agent_position = agent_state.position
+            previous_position[1] = agent_position[1]
 
             distance_to_target[obj_id] = geodesic_distance(
                 self._task._simple_pathfinder, previous_position, agent_position
