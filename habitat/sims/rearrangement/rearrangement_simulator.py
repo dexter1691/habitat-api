@@ -11,7 +11,7 @@ from habitat.core.simulator import Config
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 from habitat_sim.agent import ActionSpec, ActuationSpec
 from habitat_sim.nav import NavMeshSettings
-
+from habitat_sim.utils import profiling_utils
 
 @registry.register_simulator(name="RearrangementSim-v0")
 class RearrangementSim(HabitatSim):
@@ -100,21 +100,30 @@ class RearrangementSim(HabitatSim):
         return self._prev_sim_obs.get("gripped_object_id", -1)
 
     def step(self, action: int):
-        dt = 1 / 60.0
+        # dt = 1 / 60.0
+        profiling_utils.range_push("sim act")
         self._num_total_frames += 1
         collided = self._default_agent.act(action)
         self._last_state = self._default_agent.get_state()
-
+        profiling_utils.range_pop()
         # step physics by dt
-        super().step_world(dt)
+        # super().step_world(dt)
 
         # Sync the gripped object after the agent moves.
+        profiling_utils.range_push("sim sync")
         self._sync_agent()
         self._sync_gripped_object(self._prev_sim_obs["gripped_object_id"])
+        profiling_utils.range_pop()
 
         # obtain observations
+        profiling_utils.range_push("sim obs")
         self._prev_sim_obs.update(self.get_sensor_observations())
         self._prev_sim_obs["collided"] = collided
+        profiling_utils.range_pop()
 
+        profiling_utils.range_push("sim sensor suite obs")
         observations = self._sensor_suite.get_observations(self._prev_sim_obs)
+        profiling_utils.range_pop()
+
+        print(self._prev_sim_obs.keys())
         return observations

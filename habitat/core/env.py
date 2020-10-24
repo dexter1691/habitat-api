@@ -20,7 +20,7 @@ from habitat.core.simulator import Observations, Simulator
 from habitat.datasets import make_dataset
 from habitat.sims import make_sim
 from habitat.tasks import make_task
-
+from habitat_sim.utils import profiling_utils
 
 class Env:
     r"""Fundamental environment class for :ref:`habitat`.
@@ -256,13 +256,17 @@ class Env:
         if isinstance(action, str) or isinstance(action, (int, np.integer)):
             action = {"action": action}
 
+        profiling_utils.range_push("task step")
         observations = self.task.step(
             action=action, episode=self.current_episode
         )
-
+        profiling_utils.range_pop()
+        
+        profiling_utils.range_push("metric update")
         self._task.measurements.update_measures(
             episode=self.current_episode, action=action, task=self.task
         )
+        profiling_utils.range_pop()
 
         self._update_step_stats()
 

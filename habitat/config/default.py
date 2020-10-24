@@ -251,9 +251,9 @@ _C.SIMULATOR.DEFAULT_AGENT_ID = 0
 _C.SIMULATOR.INITIAL_LOOK_DOWN_ANGLE = (
     0  # angle to look down at the start of the episode
 )
-_C.SIMULATOR.CROSSHAIR_POS = [320, 320]
+_C.SIMULATOR.CROSSHAIR_POS = [128, 192]  # x, y
 _C.SIMULATOR.GRAB_DISTANCE = 2.0
-_C.SIMULATOR.VISUAL_SENSOR = "rgb"
+_C.SIMULATOR.VISUAL_SENSOR = "depth"
 # -----------------------------------------------------------------------------
 # SIMULATOR SENSORS
 # -----------------------------------------------------------------------------

@@ -17,7 +17,7 @@ from habitat.core.dataset import Dataset, Episode
 from habitat.core.registry import registry
 from habitat.core.simulator import Observations, SensorSuite, Simulator
 from habitat.core.spaces import ActionSpace, EmptySpace, Space
-
+from habitat_sim.utils import profiling_utils
 
 class Action:
     r"""
@@ -298,8 +298,12 @@ class EmbodiedTask:
             action_name in self.actions
         ), f"Can't find '{action_name}' action in {self.actions.keys()}."
 
+        profiling_utils.range_push("action step")
         task_action = self.actions[action_name]
         observations = task_action.step(**action["action_args"], task=self)
+        profiling_utils.range_pop()
+        
+        profiling_utils.range_push("observation update")
         observations.update(
             self.sensor_suite.get_observations(
                 observations=observations,
@@ -308,6 +312,7 @@ class EmbodiedTask:
                 task=self,
             )
         )
+        profiling_utils.range_pop()
 
         self._is_episode_active = self._check_episode_is_active(
             observations=observations, action=action, episode=episode
