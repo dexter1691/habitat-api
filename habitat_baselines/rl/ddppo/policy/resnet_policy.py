@@ -4,7 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-
+import ipdb
+import traceback
 import numpy as np
 import torch
 from gym import spaces
@@ -158,6 +159,11 @@ class ResNetEncoder(nn.Module):
                     nn.init.constant_(layer.bias, val=0)
 
     def forward(self, observations):
+
+        if torch.isnan(observations['depth']).any():
+            print(traceback.format_stack())
+            ipdb.set_trace()
+
         if self.is_blind:
             return None
 
