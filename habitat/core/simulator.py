@@ -10,7 +10,8 @@ from typing import Any, Dict, Iterable, List, Optional, Union
 
 import attr
 from gym import Space
-from gym.spaces.dict_space import Dict as SpaceDict
+# from gym.spaces.dict_space import Dict as spaces.Dict
+from gym import spaces
 
 from habitat.config import Config
 from habitat.core.dataset import Episode
@@ -177,7 +178,7 @@ class SensorSuite:
     """
 
     sensors: Dict[str, Sensor]
-    observation_spaces: SpaceDict
+    observation_spaces: spaces.Dict
 
     def __init__(self, sensors: Iterable[Sensor]) -> None:
         """Constructor
@@ -186,14 +187,14 @@ class SensorSuite:
             each sensor must be unique.
         """
         self.sensors = OrderedDict()
-        spaces: OrderedDict[str, Space] = OrderedDict()
+        observation_spaces: OrderedDict[str, Space] = OrderedDict()
         for sensor in sensors:
             assert (
                 sensor.uuid not in self.sensors
             ), "'{}' is duplicated sensor uuid".format(sensor.uuid)
             self.sensors[sensor.uuid] = sensor
-            spaces[sensor.uuid] = sensor.observation_space
-        self.observation_spaces = SpaceDict(spaces=spaces)
+            observation_spaces[sensor.uuid] = sensor.observation_space
+        self.observation_spaces = spaces.Dict(spaces=observation_spaces)
 
     def get(self, uuid: str) -> Sensor:
         return self.sensors[uuid]

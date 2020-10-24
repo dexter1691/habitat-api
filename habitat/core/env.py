@@ -11,7 +11,7 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union
 import gym
 import numba
 import numpy as np
-from gym.spaces.dict_space import Dict as SpaceDict
+from gym import spaces
 
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode, EpisodeIterator
@@ -25,7 +25,7 @@ from habitat_sim.utils import profiling_utils
 class Env:
     r"""Fundamental environment class for :ref:`habitat`.
 
-    :data observation_space: ``SpaceDict`` object corresponding to sensor in
+    :data observation_space: ``spaces.Dict`` object corresponding to sensor in
         sim and task.
     :data action_space: ``gym.space`` object corresponding to valid actions.
 
@@ -36,8 +36,8 @@ class Env:
     connects all the three components together.
     """
 
-    observation_space: SpaceDict
-    action_space: SpaceDict
+    observation_space: spaces.Dict
+    action_space: spaces.Dict
     _config: Config
     _dataset: Optional[Dataset]
     number_of_episodes: Optional[int]
@@ -110,7 +110,7 @@ class Env:
             sim=self._sim,
             dataset=self._dataset,
         )
-        self.observation_space = SpaceDict(
+        self.observation_space = spaces.Dict(
             {
                 **self._sim.sensor_suite.observation_spaces.spaces,
                 **self._task.sensor_suite.observation_spaces.spaces,

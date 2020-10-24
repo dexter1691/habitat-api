@@ -259,7 +259,7 @@ class GrippedObjectSensor(Sensor):
         super().__init__(config=config)
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
-        return spaces.Discrete(self._sim.get_existing_object_ids()[1:])
+        return spaces.Discrete(len(self._sim.get_existing_object_ids()))
 
     def _get_uuid(self, *args: Any, **kwargs: Any):
         return "gripped_object_id"

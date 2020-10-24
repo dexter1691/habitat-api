@@ -125,5 +125,4 @@ class RearrangementSim(HabitatSim):
         observations = self._sensor_suite.get_observations(self._prev_sim_obs)
         profiling_utils.range_pop()
 
-        print(self._prev_sim_obs.keys())
         return observations
