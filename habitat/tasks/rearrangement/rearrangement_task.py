@@ -405,9 +405,9 @@ class AllObjectGoals(PointGoalSensor):
 # Define actions here
 @registry.register_task_action
 class GrabOrReleaseAction(SimulatorTaskAction):
-    def step(self, *args: Any, **kwargs: Any):
+    def step(self, task, *args: Any, **kwargs: Any):
         r"""This method is called from ``Env`` on each ``step``."""
-
+        
         gripped_object_id = self._sim._prev_sim_obs["gripped_object_id"]
         agent_config = self._sim._default_agent.agent_config
         action_spec = agent_config.action_space[HabitatSimActions.GRAB_RELEASE]
@@ -422,8 +422,11 @@ class GrabOrReleaseAction(SimulatorTaskAction):
             self._sim.set_transformation(T, gripped_object_id)
 
             position = self._sim.get_translation(gripped_object_id)
+            agent_position = self._sim.get_agent_state().position
 
-            if self._sim.pathfinder.is_navigable(position):
+            dist = geodesic_distance(task._simple_pathfinder, position, agent_position)
+
+            if self._sim.pathfinder.is_navigable(position) and task._simple_pathfinder.is_navigable(position) and dist != float('inf'):
                 self._sim.set_object_motion_type(
                     MotionType.STATIC, gripped_object_id
                 )
