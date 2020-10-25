@@ -123,9 +123,10 @@ def _to_tensor(v) -> torch.Tensor:
         return v
     elif isinstance(v, np.ndarray):
         return torch.from_numpy(v)
-    else:
+    elif v is not None:
         return torch.tensor(v, dtype=torch.float)
-
+    else:
+        return None
 
 def batch_obs(
     observations: List[Dict], device: Optional[torch.device] = None
@@ -148,6 +149,11 @@ def batch_obs(
             batch[sensor].append(_to_tensor(obs[sensor]))
 
     for sensor in batch:
+        if batch[sensor] is None:
+            print(sensor, batch[sensor])
+            import ipdb
+            ipdb.set_trace()
+            continue
         batch[sensor] = (
             torch.stack(batch[sensor], dim=0)
             .to(device=device)

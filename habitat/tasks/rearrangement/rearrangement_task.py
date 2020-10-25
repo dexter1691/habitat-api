@@ -6,10 +6,13 @@
 
 
 import os
+import json
+import json_tricks
 from collections import defaultdict
 from typing import Any, Dict, List, Type, Union
 
 import attr
+import shortuuid
 import numpy as np
 from gym import spaces
 
@@ -148,6 +151,7 @@ class ObjectToGoalDistance(Measure):
         self._sim = sim
         self._config = config
         self._task = task
+        self._elapsed_steps = 0
 
         super().__init__(**kwargs)
 
@@ -156,6 +160,7 @@ class ObjectToGoalDistance(Measure):
         return ObjectToGoalDistance.cls_uuid
 
     def reset_metric(self, episode, *args: Any, **kwargs: Any):
+        self._elapsed_steps = 0
         self.update_metric(*args, episode=episode, **kwargs)
 
     def _geo_dist(self, src_pos, goal_pos: np.array) -> float:
@@ -170,6 +175,7 @@ class ObjectToGoalDistance(Measure):
         distance_to_target = {}
         agent_state = self._sim.get_agent_state()
         agent_position = agent_state.position
+        self._elapsed_steps += 1
 
         for sim_obj_id in self._sim.get_existing_object_ids():
             if sim_obj_id == self._task.agent_object_id:
@@ -187,6 +193,11 @@ class ObjectToGoalDistance(Measure):
             distance_to_target[obj_id] = geodesic_distance(
                 self._task._simple_pathfinder, previous_position, goal_position
             )
+
+            if np.isinf(distance_to_target[obj_id]):
+                print("Object To Goal distance", obj_id, previous_position, goal_position, agent_position, self._elapsed_steps)
+                self._task.save_replay(episode)
+                distance_to_target[obj_id] = self._euclidean_distance(previous_position, goal_position)
 
         self._metric = distance_to_target
 
@@ -208,6 +219,7 @@ class AgentToObjectDistance(Measure):
         self._sim = sim
         self._config = config
         self._task = task
+        self._elapsed_steps = 0
 
         super().__init__(**kwargs)
 
@@ -216,6 +228,7 @@ class AgentToObjectDistance(Measure):
         return AgentToObjectDistance.cls_uuid
 
     def reset_metric(self, episode, *args: Any, **kwargs: Any):
+        self._elapsed_steps = 0
         self.update_metric(*args, episode=episode, **kwargs)
 
     def _euclidean_distance(self, position_a, position_b):
@@ -228,6 +241,7 @@ class AgentToObjectDistance(Measure):
         agent_state = self._sim.get_agent_state()
         agent_position = agent_state.position
 
+        self._elapsed_steps += 1
         for _, sim_obj_id in enumerate(self._sim.get_existing_object_ids()):
             if sim_obj_id == self._task.agent_object_id:
                 continue
@@ -240,6 +254,11 @@ class AgentToObjectDistance(Measure):
             distance_to_target[obj_id] = geodesic_distance(
                 self._task._simple_pathfinder, previous_position, agent_position
             )
+            
+            if np.isinf(distance_to_target[obj_id]):
+                print("Agent To Object distance", obj_id, previous_position, agent_position, episode.scene_id, episode.episode_id, self._elapsed_steps)
+                self._task.save_replay(episode)
+                distance_to_target[obj_id] = self._euclidean_distance(previous_position, agent_position)
 
         self._metric = distance_to_target
 
@@ -466,6 +485,7 @@ class RearrangementTask(NavigationTask):
         super().__init__(**kwargs)
         self._episode_was_reset = False
         self.misc_dict = defaultdict()
+        self.replay = []
 
     def register_object_templates(self):
         r"""
@@ -504,6 +524,14 @@ class RearrangementTask(NavigationTask):
         self._sim.agent_object_id = self.agent_object_id
         self._sim.set_translation(episode.start_position, self.agent_object_id)
 
+        # Recompute a base navmesh without objects
+        self._simple_pathfinder = habitat_sim.PathFinder()
+        name, ext = os.path.splitext(episode.scene_id)
+        self._simple_pathfinder.load_nav_mesh(name + ".navmesh")
+        self._sim.recompute_navmesh(
+            self._simple_pathfinder, self._sim.navmesh_settings, False
+        )
+
         self.sim_object_to_objid_mapping = {}
         self.objid_to_sim_object_mapping = {}
 
@@ -523,14 +551,6 @@ class RearrangementTask(NavigationTask):
             self._sim.set_rotation(object_rot, object_id)
             self._sim.set_object_motion_type(MotionType.STATIC, object_id)
 
-        # Recompute a base navmesh without objects
-        self._simple_pathfinder = habitat_sim.PathFinder()
-        name, ext = os.path.splitext(episode.scene_id)
-        self._simple_pathfinder.load_nav_mesh(name + ".navmesh")
-        self._sim.recompute_navmesh(
-            self._simple_pathfinder, self._sim.navmesh_settings, False
-        )
-
         # Recompute the navmesh after placing all the objects.
         self._sim.recompute_navmesh(
             self._sim.pathfinder, self._sim.navmesh_settings, True
@@ -540,10 +560,12 @@ class RearrangementTask(NavigationTask):
         self._initialize_objects(episode)
         self._episode_was_reset = True
         self.misc_dict = {}
+        self.replay = []
         return super().reset(episode)
 
     def step(self, action: Union[int, Dict[str, Any]], episode: Type[Episode]):
         self._episode_was_reset = False
+        self.replay.append(action)
         return super().step(action, episode)
 
     def overwrite_sim_config(self, sim_config, episode):
@@ -553,3 +575,28 @@ class RearrangementTask(NavigationTask):
 
     def did_episode_reset(self, *args: Any, **kwargs: Any) -> bool:
         return self._episode_was_reset
+
+    def save_replay(self, episode, info={}):
+        data = {
+            'episode_id': episode.episode_id, 
+            'scene_id': episode.scene_id, 
+            'actions': self.replay, 
+            'agent_pos': np.array(self._sim._last_state.position).tolist(), 
+            'sim_object_id_to_objid_mapping': self.sim_object_to_objid_mapping, 
+            'objid_to_sim_object_id_mapping': self.objid_to_sim_object_mapping, 
+            'current_position': {}, 
+            'misc_dict': self.misc_dict,
+            'gripped_object_id': self._sim.gripped_object_id, 
+            'info': info
+        }
+
+        existing_object_ids = self._sim.get_existing_object_ids()
+        for obj_id in existing_object_ids:
+            pos = self._sim.get_translation(obj_id)
+            data['current_position'][obj_id] = np.array(pos).tolist()
+        
+        uuid = shortuuid.uuid()
+        with open('data/replays/replays_{}_{}_{}.json'.format(uuid, episode.episode_id, episode.scene_id.split('/')[-1]), 'w') as f:
+            json_tricks.dump(data, f)
+
+        print("Saving Replay: ", 'data/replays/replays_{}_{}_{}.json'.format(uuid, episode.episode_id, episode.scene_id.split('/')[-1]))

@@ -7,6 +7,8 @@
 import torch
 from torch import nn as nn
 from torch import optim as optim
+import ipdb 
+import traceback 
 
 EPS_PPO = 1e-5
 
@@ -71,7 +73,7 @@ class PPO(nn.Module):
                 advantages, self.num_mini_batch
             )
 
-            for sample in data_generator:
+            for i, sample in enumerate(data_generator):
                 (
                     obs_batch,
                     recurrent_hidden_states_batch,
@@ -83,7 +85,7 @@ class PPO(nn.Module):
                     old_action_log_probs_batch,
                     adv_targ,
                 ) = sample
-
+                
                 # Reshape to do in a single forward pass for all steps
                 (
                     values,
@@ -143,6 +145,11 @@ class PPO(nn.Module):
                 value_loss_epoch += value_loss.item()
                 action_loss_epoch += action_loss.item()
                 dist_entropy_epoch += dist_entropy.item()
+
+                # Check for nan!! 
+                if torch.isnan(self.actor_critic.net.goal_embedding.weight).any():
+                    print(traceback.format_stack())
+                    ipdb.set_trace()
 
         num_updates = self.ppo_epoch * self.num_mini_batch
 
