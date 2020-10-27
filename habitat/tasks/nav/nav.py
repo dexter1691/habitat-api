@@ -8,6 +8,7 @@ from typing import Any, List, Optional, Type
 
 import attr
 import numpy as np
+import magnum as mn
 from gym import spaces
 
 from habitat.config import Config
@@ -33,8 +34,13 @@ from habitat.tasks.utils import cartesian_to_polar
 from habitat.utils.geometry_utils import (
     quaternion_from_coeff,
     quaternion_rotate_vector,
+    angle_between_quaternions
 )
 from habitat.utils.visualizations import fog_of_war, maps
+
+from habitat_sim.utils.common import quat_to_magnum
+from habitat_sim.geo import FRONT
+
 
 cv2 = try_cv2_import()
 
@@ -1003,20 +1009,57 @@ class StopAction(SimulatorTaskAction):
 
 @registry.register_task_action
 class LookUpAction(SimulatorTaskAction):
+    MAX_LIMIT = 31
+
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._sim.step(HabitatSimActions.LOOK_UP)
+        agent_state = self._sim.get_agent_state()
+        action_space = self._sim._default_agent.agent_config.action_space
+        amount = action_space[HabitatSimActions.LOOK_DOWN].actuation.amount
+        agent_rot = agent_state.rotation
+        camera_rot = agent_state.sensor_states['depth'].rotation
+
+        rotation = quat_to_magnum(camera_rot)
+        look_vector = rotation.transform_vector(FRONT)
+        look_angle = mn.Rad(np.arctan2(look_vector[1], -look_vector[2]))
+        
+        if mn.Deg(look_angle) +  mn.Deg(amount) < mn.Deg(self.MAX_LIMIT):
+            return self._sim.step(HabitatSimActions.LOOK_UP)
+
+        observations = self._sim._sensor_suite.get_observations(self._sim._prev_sim_obs)
+        return observations
 
 
 @registry.register_task_action
 class LookDownAction(SimulatorTaskAction):
+    MIN_LIMIT = -31
+    def __init__(
+        self, *args: Any, config: Config, sim: Simulator, **kwargs: Any
+    ) -> None:
+        self._config = config
+        self._sim = sim
+
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._sim.step(HabitatSimActions.LOOK_DOWN)
+        agent_state = self._sim.get_agent_state()
+        action_space = self._sim._default_agent.agent_config.action_space
+        amount = action_space[HabitatSimActions.LOOK_DOWN].actuation.amount
+        agent_rot = agent_state.rotation
+        camera_rot = agent_state.sensor_states['depth'].rotation
+
+        rotation = quat_to_magnum(camera_rot)
+        look_vector = rotation.transform_vector(FRONT)
+        look_angle = mn.Rad(np.arctan2(look_vector[1], -look_vector[2]))
+
+        if mn.Deg(look_angle) -  mn.Deg(amount) > mn.Deg(self.MIN_LIMIT):
+            return self._sim.step(HabitatSimActions.LOOK_DOWN)
+        
+        observations = self._sim._sensor_suite.get_observations(self._sim._prev_sim_obs)
+        return observations
 
 
 @registry.register_task_action
