@@ -1024,7 +1024,7 @@ class LookUpAction(SimulatorTaskAction):
         rotation = quat_to_magnum(camera_rot)
         look_vector = rotation.transform_vector(FRONT)
         look_angle = mn.Rad(np.arctan2(look_vector[1], -look_vector[2]))
-        
+
         if mn.Deg(look_angle) +  mn.Deg(amount) < mn.Deg(self.MAX_LIMIT):
             return self._sim.step(HabitatSimActions.LOOK_UP)
 
@@ -1057,7 +1057,7 @@ class LookDownAction(SimulatorTaskAction):
 
         if mn.Deg(look_angle) -  mn.Deg(amount) > mn.Deg(self.MIN_LIMIT):
             return self._sim.step(HabitatSimActions.LOOK_DOWN)
-        
+
         observations = self._sim._sensor_suite.get_observations(self._sim._prev_sim_obs)
         return observations
 

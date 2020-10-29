@@ -235,6 +235,16 @@ _C.TASK.OBJECT_TO_GOAL_DISTANCE.TYPE = "ObjectToGoalDistance"
 _C.TASK.AGENT_TO_OBJECT_DISTANCE = CN()
 _C.TASK.AGENT_TO_OBJECT_DISTANCE.TYPE = "AgentToObjectDistance"
 # -----------------------------------------------------------------------------
+# Rearrangement SPL MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.REARRANGEMENT_SPL = CN()
+_C.TASK.REARRANGEMENT_SPL.TYPE = "RearrangementSPL"
+# -----------------------------------------------------------------------------
+# Episode Distance MEASUREMENT
+# -----------------------------------------------------------------------------
+_C.TASK.EPISODE_DISTANCE = CN()
+_C.TASK.EPISODE_DISTANCE.TYPE = "EpisodeDistance"
+# -----------------------------------------------------------------------------
 # SIMULATOR
 # -----------------------------------------------------------------------------
 _C.SIMULATOR = CN()

@@ -79,6 +79,32 @@ def geodesic_distance(pathfinder, position_a, position_b):
     return path.geodesic_distance
 
 
+def start_env_episode_distance(task, episode, pickup_order):
+
+        pathfinder = task._simple_pathfinder
+        agent_pos = episode.start_position
+        object_positions = [obj.position for obj in episode.objects]
+        goal_positions = [obj.position for obj in episode.goals]
+
+        prev_obj_end_pos = agent_pos
+        shortest_dist = 0
+
+        for i in range(len(pickup_order)):
+            curr_idx = pickup_order[i] - 1
+            curr_obj_start_pos = object_positions[curr_idx]
+            curr_obj_end_pos = goal_positions[curr_idx]
+            shortest_dist += geodesic_distance(
+                    pathfinder, prev_obj_end_pos, [curr_obj_start_pos]
+                )
+
+            shortest_dist += geodesic_distance(
+                        pathfinder, curr_obj_start_pos, [curr_obj_end_pos]
+                    )
+            prev_obj_end_pos = curr_obj_end_pos
+
+        return shortest_dist
+
+
 @attr.s(auto_attribs=True, kw_only=True)
 class RearrangementSpec:
     r"""Specifications that capture the initial or final pose of the object."""
@@ -254,13 +280,107 @@ class AgentToObjectDistance(Measure):
             distance_to_target[obj_id] = geodesic_distance(
                 self._task._simple_pathfinder, previous_position, agent_position
             )
-            
+
             if np.isinf(distance_to_target[obj_id]):
                 print("Agent To Object distance", obj_id, previous_position, agent_position, episode.scene_id, episode.episode_id, self._elapsed_steps)
                 self._task.save_replay(episode)
                 distance_to_target[obj_id] = self._euclidean_distance(previous_position, agent_position)
 
         self._metric = distance_to_target
+
+
+@registry.register_measure
+class RearrangementSPL(Measure):
+    r"""SPL (Success weighted by Path Length) for the the rearrangement task
+    """
+
+    def __init__(
+        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
+    ):
+        self._previous_position = None
+        self._start_end_episode_distance = None
+        self._agent_episode_distance = None
+        self._episode_view_points = None
+        self._sim = sim
+        self._config = config
+
+        super().__init__()
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return "rearrangement_spl"
+
+    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
+
+        self._previous_position = self._sim.get_agent_state().position
+        self._agent_episode_distance = 0.0
+        self._start_end_episode_distance = start_env_episode_distance(task, episode, episode.pickup_order)
+
+        self.update_metric(episode=episode, task=task, *args, **kwargs)
+
+    def _euclidean_distance(self, position_a, position_b):
+        return np.linalg.norm(position_b - position_a, ord=2)
+
+    def update_metric(
+        self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any
+    ):
+        # ep_success = task.measurements.measures[Success.cls_uuid].get_metric()
+
+        current_position = self._sim.get_agent_state().position
+        self._agent_episode_distance += self._euclidean_distance(
+            current_position, self._previous_position
+        )
+
+        self._previous_position = current_position
+
+        self._metric = (
+            self._start_end_episode_distance
+            / max(
+                self._start_end_episode_distance, self._agent_episode_distance
+            )
+        )
+
+@registry.register_measure
+class EpisodeDistance(Measure):
+    r"""SPL (Success weighted by Path Length) for the the rearrangement task
+    """
+
+    def __init__(
+        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
+    ):
+        self._previous_position = None
+        self._start_end_episode_distance = None
+        self._agent_episode_distance = None
+        self._episode_view_points = None
+        self._sim = sim
+        self._config = config
+
+        super().__init__()
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return "episode_distance"
+
+    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
+
+        self._previous_position = self._sim.get_agent_state().position
+        self._agent_episode_distance = 0.0
+
+        self.update_metric(episode=episode, task=task, *args, **kwargs)
+
+    def _euclidean_distance(self, position_a, position_b):
+        return np.linalg.norm(position_b - position_a, ord=2)
+
+    def update_metric(
+        self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any
+    ):
+        # ep_success = task.measurements.measures[Success.cls_uuid].get_metric()
+
+        current_position = self._sim.get_agent_state().position
+        self._agent_episode_distance += self._euclidean_distance(
+            current_position, self._previous_position
+        )
+
+        self._previous_position = current_position
+        self._metric = self._agent_episode_distance
 
 
 @registry.register_sensor
@@ -407,7 +527,7 @@ class AllObjectGoals(PointGoalSensor):
 class GrabOrReleaseAction(SimulatorTaskAction):
     def step(self, task, *args: Any, **kwargs: Any):
         r"""This method is called from ``Env`` on each ``step``."""
-        
+
         gripped_object_id = self._sim._prev_sim_obs["gripped_object_id"]
         agent_config = self._sim._default_agent.agent_config
         action_spec = agent_config.action_space[HabitatSimActions.GRAB_RELEASE]
@@ -581,15 +701,15 @@ class RearrangementTask(NavigationTask):
 
     def save_replay(self, episode, info={}):
         data = {
-            'episode_id': episode.episode_id, 
-            'scene_id': episode.scene_id, 
-            'actions': self.replay, 
-            'agent_pos': np.array(self._sim._last_state.position).tolist(), 
-            'sim_object_id_to_objid_mapping': self.sim_object_to_objid_mapping, 
-            'objid_to_sim_object_id_mapping': self.objid_to_sim_object_mapping, 
-            'current_position': {}, 
+            'episode_id': episode.episode_id,
+            'scene_id': episode.scene_id,
+            'actions': self.replay,
+            'agent_pos': np.array(self._sim._last_state.position).tolist(),
+            'sim_object_id_to_objid_mapping': self.sim_object_to_objid_mapping,
+            'objid_to_sim_object_id_mapping': self.objid_to_sim_object_mapping,
+            'current_position': {},
             'misc_dict': self.misc_dict,
-            'gripped_object_id': self._sim.gripped_object_id, 
+            'gripped_object_id': self._sim.gripped_object_id,
             'info': info
         }
 
@@ -597,7 +717,7 @@ class RearrangementTask(NavigationTask):
         for obj_id in existing_object_ids:
             pos = self._sim.get_translation(obj_id)
             data['current_position'][obj_id] = np.array(pos).tolist()
-        
+
         uuid = shortuuid.uuid()
         with open('data/replays/replays_{}_{}_{}.json'.format(uuid, episode.episode_id, episode.scene_id.split('/')[-1]), 'w') as f:
             json_tricks.dump(data, f)
