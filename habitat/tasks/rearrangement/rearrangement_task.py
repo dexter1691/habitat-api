@@ -95,11 +95,11 @@ def start_env_episode_distance(task, episode, pickup_order):
             curr_obj_end_pos = goal_positions[curr_idx]
             shortest_dist += geodesic_distance(
                     pathfinder, prev_obj_end_pos, [curr_obj_start_pos]
-                )
+                ) - 1.0
 
             shortest_dist += geodesic_distance(
                         pathfinder, curr_obj_start_pos, [curr_obj_end_pos]
-                    )
+                    ) - 0.5
             prev_obj_end_pos = curr_obj_end_pos
 
         return shortest_dist
@@ -222,7 +222,7 @@ class ObjectToGoalDistance(Measure):
 
             if np.isinf(distance_to_target[obj_id]):
                 print("Object To Goal distance", obj_id, previous_position, goal_position, agent_position, self._elapsed_steps)
-                self._task.save_replay(episode)
+                # self._task.save_replay(episode)
                 distance_to_target[obj_id] = self._euclidean_distance(previous_position, goal_position)
 
         self._metric = distance_to_target
