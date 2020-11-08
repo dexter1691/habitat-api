@@ -28,7 +28,7 @@ from rearrangement.utils.geometry import geodesic_distance
 # get_ipython().run_line_magic('load_ext', 'autoreload')
 # get_ipython().run_line_magic('autoreload', '2')
 
-from rearrangement.utils.dataset import make_cfg, navmesh_settings, init_agent, init_episode_dict, add_goal_details, add_object_details, set_object_on_top_of_surface, settings
+from rearrangement.utils.dataset import make_cfg, navmesh_settings, init_agent, init_episode_dict, add_goal_details, add_object_details, set_object_on_top_of_surface, settings, get_rotation
 from rearrangement.utils.dataset import validate_again, validate_object, graph_validate, euclidean_distance, validate_object_goal_pointnav
 from rearrangement.utils.visualization import get_top_down_map_sim
 from rearrangement.utils.planner import compute_oracle_pickup_order_sim, compute_l2dist_pickup_order_sim, start_env_episode_distance_sim
@@ -214,8 +214,8 @@ def build_single_episode(sim, settings, scene_id, num_objects=5, object_obstacle
 
     result = graph_validate(sim, simple_pathfinder, agent_object_id, dist_thresh)
     
-    if result == False or len(object_idxs) == 0:
-        print("graph validation failed")
+    if result == False or len(object_idxs) !=num_objects:
+        # print("graph validation failed")
         episode_attempt_count += 1
         if episode_attempt_count % 20 == 0 and episode_attempt_count > 20: 
             print("Reducing object count")
@@ -226,9 +226,9 @@ def build_single_episode(sim, settings, scene_id, num_objects=5, object_obstacle
     episode_attempt_count = 0
 
     assert len(object_idxs) == len(goal_idxs)
+    
 
-
-    episode_dict = init_episode_dict(sim, scene_id, episode, agent_object_id)
+    episode_dict = init_episode_dict(sim, settings['scene'], episode, agent_object_id)
     episode_dict = add_object_details(sim, episode_dict, len(object_idxs), object_idxs, object_template_idxs)
     episode_dict = add_goal_details(sim, episode_dict, len(object_idxs), goal_idxs)
     return episode_dict, agent_object_id
@@ -241,7 +241,8 @@ def sample_episode(sim, settings, scene_id, num_objects, threshold=0.95):
         return episode, agent_object_id, None, False
     
     i = 0
-    while (i < 20):
+    j = 0
+    while (i < 20 and j < 1000):
         object_positions = [obj['position'] for obj in episode['objects']]
         goal_positions = [obj['position'] for obj in episode['goals']]
         agent_pos = sim.get_agent(0).get_state().position
@@ -260,17 +261,24 @@ def sample_episode(sim, settings, scene_id, num_objects, threshold=0.95):
             print('\r ratio: {:.3f} \tlength: {} \t i:{}'.format(dist/dist1, len(episodes)+1, i), end=" ")
             if (dist/dist1 < threshold):
                 # print(res['pickup_order'], res1['pickup_order_l2dist'])
+                episode['start_position'] = np.array(sim.agents[0].scene_node.translation).tolist()
+                episode['start_rotation'] = get_rotation(sim, agent_object_id)
+
                 return episode, agent_object_id, top_down_map, True
             i+=1
         
         sim.remove_object(agent_object_id)
         start_state, agent_object_id = init_agent(sim)
-        # print(agent_pos, i)
+        j += 1
 
     return episode, agent_object_id, top_down_map, False
 
 
 def main(args):
+    split = args.split
+    episode_num = args.episode_num
+    num_objects  = args.num_object 
+
     train_df = pd.read_pickle('/srv/share3/hagrawal9/project/habitat/habitat-api/data/sokoban_gibson_{}.pkl'.format(args.split))
     
     print("Use object as obstacles: {}".format(args.object_obstacles))
@@ -285,26 +293,37 @@ def main(args):
     sim = habitat_sim.Simulator(cfg)
 
     attempt = 0
-    while(len(episodes) < 50):
+    while(len(episodes) < episode_num):
         # episode = sample_episode(sim, settings, scene_id, num_objects)
         episode, agent_object_id, tdmap, s = sample_episode(sim, settings, scene_id, num_objects=5, threshold=args.threshold)
         
         if s:
+            print("")
             episodes.append(episode)
+            data = {
+                'episodes': episodes, 
+                'object_templates': object_templates
+            }
+            with gzip.open('/srv/flash1/hagrawal9/project/habitat/habitat-api/data/datasets/rearrangement/gibson/v1/{}/temp/rearrangement_hard_v7_{}_n={}_o={}_t={}_{}.json.gz'.format(
+                split, split, len(episodes), num_objects, args.threshold, scene_id
+            ), "wt") as f:
+                json.dump(data, f)
+                
         else:
             print('\n retrying {} \t attempt:{}'.format(len(episodes), attempt))
         attempt+=1
 
     sim.close()
 
-    split = args.split
-    episode_num = args.episode_num
-    num_objects  = args.num_object 
-
-    with gzip.open('/srv/flash1/hagrawal9/project/habitat/habitat-api/data/datasets/rearrangement/gibson/v1/{}/content/rearrangement_hard_v6_{}_n={}_o={}_{}.json.gz'.format(
-        split, split, episode_num, num_objects, scene_id
+    data = {
+        'episodes': episodes, 
+        'object_templates': object_templates
+    }
+    
+    with gzip.open('/srv/flash1/hagrawal9/project/habitat/habitat-api/data/datasets/rearrangement/gibson/v1/{}/new/rearrangement_hard_v7_{}_n={}_o={}_t={}_{}.json.gz'.format(
+        split, split, episode_num, num_objects, args.threshold, scene_id
     ), "wt") as f:
-        json.dump(episodes, f)
+        json.dump(data, f)
 
 
 if __name__ == '__main__':
