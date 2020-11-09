@@ -180,7 +180,7 @@ def init_test_scene_new(sim, simple_pathfinder, object_templates, navmesh_settin
     return object_positions, goal_positions, object_idxs, goal_idxs, object_template_idxs
         
 
-def build_single_episode(sim, settings, scene_id, num_objects=5, object_obstacles=True):   
+def build_single_episode(sim, settings, scene_id, episode, num_objects=5, object_obstacles=True):   
     simple_pathfinder = habitat_sim.PathFinder()
     name, ext = os.path.splitext(settings['scene'])
     simple_pathfinder.load_nav_mesh(name + ".navmesh")
@@ -190,7 +190,6 @@ def build_single_episode(sim, settings, scene_id, num_objects=5, object_obstacle
 
     sim.recompute_navmesh(sim.pathfinder, navmesh_settings, object_obstacles)
     
-    episode = 0
     dist_thresh = 3.0
 
     object_count = num_objects
@@ -235,7 +234,7 @@ def build_single_episode(sim, settings, scene_id, num_objects=5, object_obstacle
 
 
 def sample_episode(sim, settings, scene_id, num_objects, threshold=0.95):
-    episode, agent_object_id = build_single_episode(sim, settings, scene_id, num_objects=num_objects)
+    episode, agent_object_id = build_single_episode(sim, settings, scene_id, len(episodes), num_objects=num_objects)
 
     if episode is None:
         return episode, agent_object_id, None, False

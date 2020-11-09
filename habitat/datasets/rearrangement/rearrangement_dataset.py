@@ -45,8 +45,9 @@ class RearrangementDatasetV0(PointNavDatasetV1):
         
         # self.object_templates = deserialized['object_templates']
         for i, episode in enumerate(deserialized["episodes"]):
+            episode['episode_id'] = str(episode['episode_id'])
             episode_obj = RearrangementEpisode(**episode)
-            episode_obj.episode_id = str(i)
+            # episode_obj.episode_id = str(episode.episode_id)
 
             if scenes_dir is not None:
                 if episode_obj.scene_id.startswith(DEFAULT_SCENE_PATH_PREFIX):
