@@ -195,6 +195,7 @@ def generate_video(
     video_dir: Optional[str],
     images: List[np.ndarray],
     episode_id: int,
+    scene_id: str, 
     checkpoint_idx: int,
     metrics: Dict[str, float],
     tb_writer: TensorboardWriter,
@@ -220,9 +221,10 @@ def generate_video(
 
     metric_strs = []
     for k, v in metrics.items():
-        metric_strs.append(f"{k}={v:.2f}")
+        if 'episode_spl' in k or 'episode_success':
+            metric_strs.append(f"{k}={v:.2f}")
 
-    video_name = f"episode={episode_id}-ckpt={checkpoint_idx}-" + "-".join(
+    video_name = f"scene_id={scene_id}_episode={episode_id}-ckpt={checkpoint_idx}-" + "-".join(
         metric_strs
     )
     if "disk" in video_option:

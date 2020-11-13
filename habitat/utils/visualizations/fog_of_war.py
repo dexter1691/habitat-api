@@ -95,7 +95,7 @@ def draw_fog_of_war_line(top_down_map, fog_of_war_mask, pt1, pt2):
         if top_down_map[x, y] == maps.MAP_INVALID_POINT:
             fog_of_war_mask[x, y] = 2
             count +=1
-            if count >= 5:
+            if count >= 10:
                 break
         else:
             fog_of_war_mask[x, y] = 1

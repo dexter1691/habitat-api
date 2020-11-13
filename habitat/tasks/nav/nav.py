@@ -45,7 +45,7 @@ from habitat_sim.geo import FRONT
 cv2 = try_cv2_import()
 
 
-MAP_THICKNESS_SCALAR: int = 128
+MAP_THICKNESS_SCALAR: int = 256
 
 
 def merge_sim_episode_config(

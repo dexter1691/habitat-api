@@ -221,7 +221,7 @@ class ObjectToGoalDistance(Measure):
             )
 
             if np.isinf(distance_to_target[obj_id]):
-                print("Object To Goal distance", obj_id, previous_position, goal_position, agent_position, self._elapsed_steps)
+                # print("Object To Goal distance", obj_id, previous_position, goal_position, agent_position, self._elapsed_steps)
                 # self._task.save_replay(episode)
                 distance_to_target[obj_id] = self._euclidean_distance(previous_position, goal_position)
 
@@ -282,8 +282,8 @@ class AgentToObjectDistance(Measure):
             )
 
             if np.isinf(distance_to_target[obj_id]):
-                print("Agent To Object distance", obj_id, previous_position, agent_position, episode.scene_id, episode.episode_id, self._elapsed_steps)
-                self._task.save_replay(episode)
+                # print("Agent To Object distance", obj_id, previous_position, agent_position, episode.scene_id, episode.episode_id, self._elapsed_steps)
+                # self._task.save_replay(episode)
                 distance_to_target[obj_id] = self._euclidean_distance(previous_position, agent_position)
 
         self._metric = distance_to_target
@@ -623,9 +623,9 @@ class RearrangementTask(NavigationTask):
             obj_template.scale = np.array(template_info["scale"])
             obj_attr_mgr.register_template(obj_template)
 
-        obj_handle = obj_attr_mgr.get_file_template_handles("sphere")[0]
+        obj_handle = obj_attr_mgr.get_file_template_handles("locobot")[0]
         obj_template = obj_attr_mgr.get_template_by_handle(obj_handle)
-        obj_template.scale = np.array([0.8, 0.8, 0.8])
+        obj_template.scale = np.array([1.0, 1.0, 1.0])
         obj_attr_mgr.register_template(obj_template)
 
     def _initialize_objects(self, episode: RearrangementEpisode):
@@ -641,7 +641,7 @@ class RearrangementTask(NavigationTask):
                 self._sim.remove_object(obj_id)
 
         # add agent object
-        object_handle = obj_attr_mgr.get_file_template_handles("sphere")[0]
+        object_handle = obj_attr_mgr.get_file_template_handles("locobot")[0]
 
         self.agent_object_id = self._sim.add_object_by_handle(object_handle)
         self._sim.agent_object_id = self.agent_object_id
@@ -699,7 +699,7 @@ class RearrangementTask(NavigationTask):
     def did_episode_reset(self, *args: Any, **kwargs: Any) -> bool:
         return self._episode_was_reset
 
-    def save_replay(self, episode, info={}):
+    def save_replay(self, episode, info={}, path="", uuid=""):
         data = {
             'episode_id': episode.episode_id,
             'scene_id': episode.scene_id,
@@ -718,8 +718,13 @@ class RearrangementTask(NavigationTask):
             pos = self._sim.get_translation(obj_id)
             data['current_position'][obj_id] = np.array(pos).tolist()
 
-        uuid = shortuuid.uuid()
-        with open('data/replays/replays_{}_{}_{}.json'.format(uuid, episode.episode_id, episode.scene_id.split('/')[-1]), 'w') as f:
+        if uuid == "":
+            uuid = shortuuid.uuid()
+        
+        if path == "":
+            path = 'data/replays/'
+        
+        with open(os.path.join(path, 'replays_{}_{}_{}.json'.format(uuid, episode.episode_id, episode.scene_id.split('/')[-1])), 'w') as f:
             json_tricks.dump(data, f)
 
-        print("Saving Replay: ", 'data/replays/replays_{}_{}_{}.json'.format(uuid, episode.episode_id, episode.scene_id.split('/')[-1]))
+        # print("Saving Replay: ", os.path.join(path, 'replays_{}_{}_{}.json'.format(uuid, episode.episode_id, episode.scene_id.split('/')[-1])))

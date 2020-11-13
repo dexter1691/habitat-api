@@ -201,6 +201,7 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
     frame = egocentric_view
 
     if "top_down_map" in info:
+        
         top_down_map = maps.colorize_draw_agent_and_fit_to_height(
             info["top_down_map"], egocentric_view.shape[0]
         )

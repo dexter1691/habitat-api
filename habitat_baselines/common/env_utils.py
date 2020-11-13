@@ -82,6 +82,8 @@ def construct_envs(
 
     assert sum(map(len, scene_splits)) == len(scenes)
 
+    print("Total Episodes:{}".format(len(scenes)))
+
     for i in range(num_processes):
         proc_config = config.clone()
         proc_config.defrost()

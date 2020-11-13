@@ -12,6 +12,7 @@ from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 from habitat_sim.agent import ActionSpec, ActuationSpec
 from habitat_sim.nav import NavMeshSettings
 from habitat_sim.utils import profiling_utils
+from habitat_sim.utils.common import quat_to_magnum
 
 @registry.register_simulator(name="RearrangementSim-v0")
 class RearrangementSim(HabitatSim):
@@ -78,6 +79,7 @@ class RearrangementSim(HabitatSim):
 
     def _sync_agent(self):
         self.set_translation(self._last_state.position, self.agent_object_id)
+        self.set_rotation(quat_to_magnum(self._last_state.rotation), self.agent_object_id)
 
     def _sync_gripped_object(self, gripped_object_id):
         r"""
@@ -91,7 +93,7 @@ class RearrangementSim(HabitatSim):
                 agent_body_transformation, gripped_object_id
             )
             translation = agent_body_transformation.transform_point(
-                np.array([0, 2.0, 0])
+                np.array([0, 0.6, 0.2])
             )
             self.set_translation(translation, gripped_object_id)
 

@@ -278,6 +278,10 @@ SIMULATOR_SENSOR.ORIENTATION = [0.0, 0.0, 0.0]  # Euler's angles
 # -----------------------------------------------------------------------------
 _C.SIMULATOR.RGB_SENSOR = SIMULATOR_SENSOR.clone()
 _C.SIMULATOR.RGB_SENSOR.TYPE = "HabitatSimRGBSensor"
+
+_C.SIMULATOR.RGB_SENSOR_3RD_PERSON = SIMULATOR_SENSOR.clone()
+_C.SIMULATOR.RGB_SENSOR_3RD_PERSON
+_C.SIMULATOR.RGB_SENSOR_3RD_PERSON.TYPE = "HabitatSimRGBSensor3rdPerson"
 # -----------------------------------------------------------------------------
 # DEPTH SENSOR
 # -----------------------------------------------------------------------------

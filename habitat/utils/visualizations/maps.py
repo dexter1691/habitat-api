@@ -133,13 +133,12 @@ def draw_sprite(
 def draw_object_info(top_down_map, object_positions, suffix=""):
 
     for i, obj_pos in enumerate(object_positions):
-
         name = str(i + 1) + suffix
         top_down_map = draw_sprite(
             image=top_down_map,
             sprite_name=name,
             sprite_center_coord=obj_pos,
-            sprite_rotation=0,
+            sprite_rotation=90,
             sprite_radius_px=top_down_map.shape[0] // 32,
         )
 
@@ -422,7 +421,7 @@ def colorize_topdown_map(
     _map = TOP_DOWN_MAP_COLORS[top_down_map]
 
     if fog_of_war_mask is not None:
-        fog_of_war_desat_values = np.array([[fog_of_war_desat_amount], [1.0]])
+        fog_of_war_desat_values = np.array([[fog_of_war_desat_amount], [1.0], [0.25]])
         # Only desaturate things that are valid points as only valid points get revealed
         desat_mask = top_down_map != MAP_INVALID_POINT
 
@@ -477,6 +476,11 @@ def colorize_draw_agent_and_fit_to_height(
         agent_rotation=topdown_map_info["agent_angle"],
         agent_radius_px=min(top_down_map.shape[0:2]) / 32,
     )
+
+    if "object_positions" in topdown_map_info:
+        top_down_map = draw_object_info(top_down_map, topdown_map_info['object_positions'], suffix="")
+        top_down_map = draw_object_info(top_down_map, topdown_map_info['goal_positions'], suffix="g")
+        top_down_map = draw_object_info(top_down_map, topdown_map_info['current_positions'], suffix="c")
 
     if top_down_map.shape[0] > top_down_map.shape[1]:
         top_down_map = np.rot90(top_down_map, 1)
