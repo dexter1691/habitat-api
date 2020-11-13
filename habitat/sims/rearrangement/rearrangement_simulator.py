@@ -93,7 +93,7 @@ class RearrangementSim(HabitatSim):
                 agent_body_transformation, gripped_object_id
             )
             translation = agent_body_transformation.transform_point(
-                np.array([0, 0.6, 0.2])
+                np.array([0, 2.0, 0.0])
             )
             self.set_translation(translation, gripped_object_id)
 
