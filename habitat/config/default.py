@@ -273,6 +273,7 @@ SIMULATOR_SENSOR.WIDTH = 640
 SIMULATOR_SENSOR.HFOV = 90  # horizontal field of view in degrees
 SIMULATOR_SENSOR.POSITION = [0, 1.25, 0]
 SIMULATOR_SENSOR.ORIENTATION = [0.0, 0.0, 0.0]  # Euler's angles
+SIMULATOR_SENSOR.SENSOR_SUBTYPE = "PINHOLE"
 # -----------------------------------------------------------------------------
 # RGB SENSOR
 # -----------------------------------------------------------------------------
@@ -282,6 +283,10 @@ _C.SIMULATOR.RGB_SENSOR.TYPE = "HabitatSimRGBSensor"
 _C.SIMULATOR.RGB_SENSOR_3RD_PERSON = SIMULATOR_SENSOR.clone()
 _C.SIMULATOR.RGB_SENSOR_3RD_PERSON
 _C.SIMULATOR.RGB_SENSOR_3RD_PERSON.TYPE = "HabitatSimRGBSensor3rdPerson"
+
+_C.SIMULATOR.ORTHOGRAPHIC_SENSOR = SIMULATOR_SENSOR.clone()
+_C.SIMULATOR.ORTHOGRAPHIC_SENSOR.TYPE = "HabitatSimOrthographicSensor"
+_C.SIMULATOR.ORTHOGRAPHIC_SENSOR.SENSOR_SUBTYPE = "ORTHOGRAPHIC"
 # -----------------------------------------------------------------------------
 # DEPTH SENSOR
 # -----------------------------------------------------------------------------
@@ -385,6 +390,7 @@ _C.DATASET.CONTENT_SCENES = ["*"]
 _C.DATASET.DATA_PATH = (
     "data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz"
 )
+_C.DATASET.FILTER_SCENES_PATH = ""
 
 # -----------------------------------------------------------------------------
 

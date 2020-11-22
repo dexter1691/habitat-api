@@ -623,7 +623,7 @@ class RearrangementTask(NavigationTask):
             obj_template.scale = np.array(template_info["scale"])
             obj_attr_mgr.register_template(obj_template)
 
-        obj_handle = obj_attr_mgr.get_file_template_handles("sphere")[0]
+        obj_handle = obj_attr_mgr.get_file_template_handles("locobot")[0]
         obj_template = obj_attr_mgr.get_template_by_handle(obj_handle)
         obj_template.scale = np.array([0.8, 0.8, 0.8])
         obj_attr_mgr.register_template(obj_template)
@@ -641,7 +641,7 @@ class RearrangementTask(NavigationTask):
                 self._sim.remove_object(obj_id)
 
         # add agent object
-        object_handle = obj_attr_mgr.get_file_template_handles("sphere")[0]
+        object_handle = obj_attr_mgr.get_file_template_handles("locobot")[0]
 
         self.agent_object_id = self._sim.add_object_by_handle(object_handle)
         self._sim.agent_object_id = self.agent_object_id

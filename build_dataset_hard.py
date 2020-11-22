@@ -31,7 +31,12 @@ from rearrangement.utils.geometry import geodesic_distance
 from rearrangement.utils.dataset import make_cfg, navmesh_settings, init_agent, init_episode_dict, add_goal_details, add_object_details, set_object_on_top_of_surface, settings, get_rotation
 from rearrangement.utils.dataset import validate_again, validate_object, graph_validate, euclidean_distance, validate_object_goal_pointnav
 from rearrangement.utils.visualization import get_top_down_map_sim
-from rearrangement.utils.planner import compute_oracle_pickup_order_sim, compute_l2dist_pickup_order_sim, start_env_episode_distance_sim
+from rearrangement.utils.planner import (
+    compute_oracle_pickup_order_sim, 
+    compute_l2dist_pickup_order_sim, 
+    compute_closest_pickup_order_sim,
+    start_env_episode_distance_sim
+)
 
 
 object_templates = {}
@@ -242,33 +247,41 @@ def sample_episode(sim, settings, scene_id, num_objects, threshold=0.95):
     i = 0
     j = 0
     while (i < 20 and j < 1000):
-        object_positions = [obj['position'] for obj in episode['objects']]
-        goal_positions = [obj['position'] for obj in episode['goals']]
-        agent_pos = sim.get_agent(0).get_state().position
-        top_down_map = None
+        try:
+            object_positions = [obj['position'] for obj in episode['objects']]
+            goal_positions = [obj['position'] for obj in episode['goals']]
+            agent_pos = sim.get_agent(0).get_state().position
+            top_down_map = None
 
-        res = compute_oracle_pickup_order_sim(sim, sim.pathfinder, agent_pos, object_positions, goal_positions)
-        res1 = compute_l2dist_pickup_order_sim(sim, agent_pos, object_positions, goal_positions)
-        
-        if res['pickup_order'] is None:
-            pass
-        elif res1['pickup_order_l2dist'] is None:
-            pass
-        else:
-            dist = start_env_episode_distance_sim(sim, sim.pathfinder, agent_pos, object_positions, goal_positions, res['pickup_order'])        
-            dist1 = start_env_episode_distance_sim(sim, sim.pathfinder, agent_pos, object_positions, goal_positions, res1['pickup_order_l2dist'])
-            print('\r ratio: {:.3f} \tlength: {} \t i:{}'.format(dist/dist1, len(episodes)+1, i), end=" ")
-            if (dist/dist1 < threshold):
-                # print(res['pickup_order'], res1['pickup_order_l2dist'])
-                episode['start_position'] = np.array(sim.agents[0].scene_node.translation).tolist()
-                episode['start_rotation'] = get_rotation(sim, agent_object_id)
+            res = compute_oracle_pickup_order_sim(sim, sim.pathfinder, agent_pos, object_positions, goal_positions)
+            res1 = compute_l2dist_pickup_order_sim(sim, agent_pos, object_positions, goal_positions)
+            res2 = compute_closest_pickup_order_sim(sim, agent_pos, object_positions, goal_positions)
+            
+            if res['pickup_order'] is None:
+                pass
+            elif res1['pickup_order_l2dist'] is None:
+                pass
+            elif res2['pickup_order_closest'] is None:
+                pass 
+            else:
+                dist = start_env_episode_distance_sim(sim, sim.pathfinder, agent_pos, object_positions, goal_positions, res['pickup_order'])        
+                dist1 = start_env_episode_distance_sim(sim, sim.pathfinder, agent_pos, object_positions, goal_positions, res1['pickup_order_l2dist'])
+                dist2 = start_env_episode_distance_sim(sim, sim.pathfinder, agent_pos, object_positions, goal_positions, res2['pickup_order_closest'])
+                
+                print('\r ratio: {:.3f} {:.3f} \tlength: {} \t i:{}'.format(dist/dist1, dist/dist2, len(episodes)+1, i), end=" ")
+                if (dist/dist1 < threshold) and (dist/dist2 < threshold and dist1<dist2):
+                    # print(res['pickup_order'], res1['pickup_order_l2dist'])
+                    episode['start_position'] = np.array(sim.agents[0].scene_node.translation).tolist()
+                    episode['start_rotation'] = get_rotation(sim, agent_object_id)
 
-                return episode, agent_object_id, top_down_map, True
-            i+=1
-        
-        sim.remove_object(agent_object_id)
-        start_state, agent_object_id = init_agent(sim)
-        j += 1
+                    return episode, agent_object_id, top_down_map, True
+                i+=1
+            
+            sim.remove_object(agent_object_id)
+            start_state, agent_object_id = init_agent(sim)
+            j += 1
+        except Exception as e:
+            print(str(e))
 
     return episode, agent_object_id, top_down_map, False
 
@@ -303,7 +316,7 @@ def main(args):
                 'episodes': episodes, 
                 'object_templates': object_templates
             }
-            with gzip.open('/srv/flash1/hagrawal9/project/habitat/habitat-api/data/datasets/rearrangement/gibson/v1/{}/temp/rearrangement_hard_v7_{}_n={}_o={}_t={}_{}.json.gz'.format(
+            with gzip.open('/srv/flash1/hagrawal9/project/habitat/habitat-api/data/datasets/rearrangement/gibson/v1/{}/temp/rearrangement_hard_v9_{}_n={}_o={}_t={}_{}.json.gz'.format(
                 split, split, len(episodes), num_objects, args.threshold, scene_id
             ), "wt") as f:
                 json.dump(data, f)
@@ -319,7 +332,7 @@ def main(args):
         'object_templates': object_templates
     }
     
-    with gzip.open('/srv/flash1/hagrawal9/project/habitat/habitat-api/data/datasets/rearrangement/gibson/v1/{}/new/rearrangement_hard_v7_{}_n={}_o={}_t={}_{}.json.gz'.format(
+    with gzip.open('/srv/flash1/hagrawal9/project/habitat/habitat-api/data/datasets/rearrangement/gibson/v1/{}/new/rearrangement_hard_v9_{}_n={}_o={}_t={}_{}.json.gz'.format(
         split, split, episode_num, num_objects, args.threshold, scene_id
     ), "wt") as f:
         json.dump(data, f)

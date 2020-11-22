@@ -4,13 +4,15 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Set
 
 import numpy as np
 from gym import spaces
 
 import habitat_sim
+from habitat_sim._ext.habitat_sim_bindings import SensorSubType
 from habitat.core.dataset import Episode
+from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.core.simulator import (
     AgentState,
@@ -28,7 +30,7 @@ from habitat.core.spaces import Space
 RGBSENSOR_DIMENSION = 3
 
 
-def overwrite_config(config_from: Config, config_to: Any) -> None:
+def overwrite_config(config_from: Config, config_to: Any, ignore_keys: Optional[Set[str]] = None) -> None:
     r"""Takes Habitat Lab config and Habitat-Sim config structures. Overwrites
     Habitat-Sim config with Habitat Lab values, where a field name is present
     in lowercase. Mostly used to avoid :ref:`sim_cfg.field = hapi_cfg.FIELD`
@@ -45,10 +47,12 @@ def overwrite_config(config_from: Config, config_to: Any) -> None:
         else:
             return config
 
+    has_ignores = ignore_keys is None
     for attr, value in config_from.items():
-        if hasattr(config_to, attr.lower()):
-            setattr(config_to, attr.lower(), if_config_to_lower(value))
-
+        low_attr = attr.lower()
+        if has_ignores or low_attr not in ignore_keys:
+            if hasattr(config_to, low_attr):
+                setattr(config_to, low_attr, if_config_to_lower(value))
 
 def check_sim_obs(obs, sensor):
     assert obs is not None, (
@@ -107,6 +111,33 @@ class HabitatSimRGBSensor3rdPerson(RGBSensor):
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "rgb_3rd_person"
+
+@registry.register_sensor
+class HabitatSimOrthographicSensor(RGBSensor):
+    sim_sensor_type: habitat_sim.SensorType
+
+    def __init__(self, config):
+        self.sim_sensor_type = habitat_sim.SensorType.COLOR
+        super().__init__(config=config)
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+        return spaces.Box(
+            low=0,
+            high=255,
+            shape=(self.config.HEIGHT, self.config.WIDTH, RGBSENSOR_DIMENSION),
+            dtype=np.uint8,
+        )
+
+    def get_observation(self, sim_obs):
+        obs = sim_obs.get(self.uuid, None)
+        check_sim_obs(obs, self)
+
+        # remove alpha channel
+        obs = obs[:, :, :RGBSENSOR_DIMENSION]
+        return obs
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return "rgb_orthographic"
 
 @registry.register_sensor
 class HabitatSimDepthSensor(DepthSensor):
@@ -223,6 +254,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         )
         sim_config.scene.id = self.habitat_config.SCENE
         agent_config = habitat_sim.AgentConfiguration()
+        
         overwrite_config(
             config_from=self._get_agent_config(), config_to=agent_config
         )
@@ -230,8 +262,12 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         sensor_specifications = []
         for sensor in _sensor_suite.sensors.values():
             sim_sensor_cfg = habitat_sim.SensorSpec()
+            sim_sensor_cfg.sensor_subtype = getattr(
+                SensorSubType,
+                sensor.config.SENSOR_SUBTYPE.upper(),
+            )
             overwrite_config(
-                config_from=sensor.config, config_to=sim_sensor_cfg
+                config_from=sensor.config, config_to=sim_sensor_cfg, ignore_keys={"sensor_subtype", "height", "width", "hfov"},
             )
             sim_sensor_cfg.uuid = sensor.uuid
             sim_sensor_cfg.resolution = list(

@@ -111,7 +111,7 @@ class PointNavDatasetV1(Dataset):
                     data_path=dataset_dir, scene=scene
                 )
                 with gzip.open(scene_filename, "rt") as f:
-                    self.from_json(f.read(), scenes_dir=config.SCENES_DIR)
+                    self.from_json(f.read(), scenes_dir=config.SCENES_DIR, filter_scenes_path=config.FILTER_SCENES_PATH)
 
         else:
             self.episodes = list(
