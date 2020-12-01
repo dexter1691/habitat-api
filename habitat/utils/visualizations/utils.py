@@ -201,7 +201,7 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
     frame = egocentric_view
 
     if "top_down_map" in info:
-        
+
         top_down_map = maps.colorize_draw_agent_and_fit_to_height(
             info["top_down_map"], egocentric_view.shape[0]
         )
@@ -220,7 +220,7 @@ def append_text_to_image(image: np.ndarray, text: str):
         A new image with text inserted underneath the input image
     """
     h, w, c = image.shape
-    font_size = 0.5
+    font_size = 1.0
     font_thickness = 1
     font = cv2.FONT_HERSHEY_SIMPLEX
     blank_image = np.zeros(image.shape, dtype=np.uint8)

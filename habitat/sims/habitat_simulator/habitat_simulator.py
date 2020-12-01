@@ -254,7 +254,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         )
         sim_config.scene.id = self.habitat_config.SCENE
         agent_config = habitat_sim.AgentConfiguration()
-        
+
         overwrite_config(
             config_from=self._get_agent_config(), config_to=agent_config
         )
