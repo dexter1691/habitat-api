@@ -8,7 +8,7 @@ SIMULATOR:
   INITIAL_LOOK_DOWN_ANGLE: 30
   ACTION_SPACE_CONFIG: "RearrangementActions-v0"
   AGENT_0:
-    SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR']
+    SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR', 'RGB_SENSOR_3RD_PERSON']
     HEIGHT: 0.88
     RADIUS: 0.18
     MAX_CLIMB: 0.1
@@ -26,6 +26,13 @@ SIMULATOR:
     MIN_DEPTH: 0.5
     MAX_DEPTH: 5.0
     POSITION: [0, 0.88, 0]
+  RGB_SENSOR_3RD_PERSON:
+    WIDTH: 1820
+    HEIGHT: 1024
+    HFOV: 90
+    # POSITION: [0.5, 1.5,  0.2]
+    # ORIENTATION: [-0.523, 1.047, 0]
+    POSITION: [0, 1.5, 0.88]
   GRAB_DISTANCE: 1.0
   HABITAT_SIM_V0:
     ENABLE_PHYSICS: True
@@ -53,4 +60,4 @@ DATASET:
   TYPE: RearrangementDataset-v0
   SPLIT: train
   CONTENT_SCENES: ["coda_hri"]
-  DATA_PATH: "data/train.json.gz"
+  DATA_PATH: "data/hri/train.json.gz"
