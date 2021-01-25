@@ -29,7 +29,9 @@ SIMULATOR:
     MAX_DEPTH: 5.0
     POSITION: [0, 0.88, 0]
   GRAB_DISTANCE: 1.0
-    
+  HABITAT_SIM_V0:
+    ENABLE_PHYSICS: True
+
 
 TASK:
   TYPE: RearrangementTask-v0

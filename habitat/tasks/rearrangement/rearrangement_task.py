@@ -625,7 +625,7 @@ class RearrangementTask(NavigationTask):
 
         obj_handle = obj_attr_mgr.get_file_template_handles("sphere")[0]
         obj_template = obj_attr_mgr.get_template_by_handle(obj_handle)
-        obj_template.scale = np.array([1.0, 1.0, 1.0])
+        obj_template.scale = np.array([0.8, 0.8, 0.8])
         obj_attr_mgr.register_template(obj_template)
 
     def _initialize_objects(self, episode: RearrangementEpisode):
