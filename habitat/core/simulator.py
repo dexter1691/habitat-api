@@ -137,7 +137,6 @@ class DepthSensor(Sensor):
     def get_observation(self, *args: Any, **kwargs: Any):
         raise NotImplementedError
 
-
 class SemanticSensor(Sensor):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)

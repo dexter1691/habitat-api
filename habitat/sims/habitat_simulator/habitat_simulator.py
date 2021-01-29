@@ -188,6 +188,58 @@ class HabitatSimDepthSensor(DepthSensor):
 
         return obs
 
+@registry.register_sensor
+class HabitatSimSmallDepthSensor(HabitatSimDepthSensor):
+    sim_sensor_type: habitat_sim.SensorType
+    min_depth_value: float
+    max_depth_value: float
+
+    def __init__(self, config):
+        self.sim_sensor_type = habitat_sim.SensorType.DEPTH
+
+        if config.NORMALIZE_DEPTH:
+            self.min_depth_value = 0
+            self.max_depth_value = 1
+        else:
+            self.min_depth_value = config.MIN_DEPTH
+            self.max_depth_value = config.MAX_DEPTH
+
+        super().__init__(config=config)
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+        return spaces.Box(
+            low=self.min_depth_value,
+            high=self.max_depth_value,
+            shape=(self.config.HEIGHT, self.config.WIDTH, 1),
+            dtype=np.float32,
+        )
+
+    def get_observation(self, sim_obs):
+        obs = sim_obs.get(self.uuid, None)
+        check_sim_obs(obs, self)
+
+        if isinstance(obs, np.ndarray):
+            obs = np.clip(obs, self.config.MIN_DEPTH, self.config.MAX_DEPTH)
+
+            obs = np.expand_dims(
+                obs, axis=2
+            )  # make depth observation a 3D array
+        else:
+            obs = obs.clamp(self.config.MIN_DEPTH, self.config.MAX_DEPTH)
+
+            obs = obs.unsqueeze(-1)
+
+        if self.config.NORMALIZE_DEPTH:
+            # normalize depth observation to [0, 1]
+            obs = (obs - self.config.MIN_DEPTH) / (
+                self.config.MAX_DEPTH - self.config.MIN_DEPTH
+            )
+
+        return obs
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return "small_depth"
+
 
 @registry.register_sensor
 class HabitatSimSemanticSensor(SemanticSensor):

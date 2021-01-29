@@ -40,6 +40,17 @@ from habitat.tasks.nav.nav import (
 from habitat_sim.physics import MotionType
 from habitat_sim.utils.common import quat_from_coeffs, quat_to_magnum
 
+from habitat.tasks.utils import cartesian_to_polar
+from habitat.utils.geometry_utils import (
+    quaternion_from_coeff,
+    quaternion_rotate_vector,
+    angle_between_quaternions
+)
+from habitat.utils.visualizations import fog_of_war, maps
+
+from habitat_sim.utils.common import quat_to_magnum
+from habitat_sim.geo import FRONT
+
 
 def merge_sim_episode_with_object_config(
     sim_config: Config, episode: Type[Episode]
@@ -467,7 +478,6 @@ class AllObjectPositions(PointGoalSensor):
             )
 
         return sensor_data
-
 
 @registry.register_sensor
 class AllObjectGoals(PointGoalSensor):
