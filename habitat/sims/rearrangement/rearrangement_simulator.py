@@ -4,15 +4,17 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from typing import Any, List, Optional, Set
 import numpy as np
 
 from habitat.core.registry import registry
-from habitat.core.simulator import Config
+from habitat.core.simulator import Config, Observations
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 from habitat_sim.agent import ActionSpec, ActuationSpec
 from habitat_sim.nav import NavMeshSettings
 from habitat_sim.utils import profiling_utils
 from habitat_sim.utils.common import quat_to_magnum
+
 
 @registry.register_simulator(name="RearrangementSim-v0")
 class RearrangementSim(HabitatSim):
@@ -75,6 +77,7 @@ class RearrangementSim(HabitatSim):
         self.did_reset = True
         self.grip_offset = np.eye(4)
 
+        print("Resetting Simulator!! ")
         return self._sensor_suite.get_observations(sim_obs)
 
     def _sync_agent(self):
@@ -93,8 +96,8 @@ class RearrangementSim(HabitatSim):
                 agent_body_transformation, gripped_object_id
             )
             translation = agent_body_transformation.transform_point(
-                np.array([0, 2.0, 0.0])
-                # np.array([0, 0.6, 0.2])
+                # np.array([0, 2.0, 0.0])
+                np.array([0, 0.6, 0.2])
             )
             self.set_translation(translation, gripped_object_id)
 
@@ -114,13 +117,16 @@ class RearrangementSim(HabitatSim):
 
         # Sync the gripped object after the agent moves.
         profiling_utils.range_push("sim sync")
+        
         self._sync_agent()
+        
         self._sync_gripped_object(self._prev_sim_obs["gripped_object_id"])
         profiling_utils.range_pop()
 
         # obtain observations
         profiling_utils.range_push("sim obs")
         self._prev_sim_obs.update(self.get_sensor_observations())
+        
         self._prev_sim_obs["collided"] = collided
         profiling_utils.range_pop()
 
@@ -129,3 +135,33 @@ class RearrangementSim(HabitatSim):
         profiling_utils.range_pop()
 
         return observations
+
+    def get_observations_at(
+        self,
+        position: Optional[List[float]] = None,
+        rotation: Optional[List[float]] = None,
+        keep_agent_at_new_pose: bool = False,
+    ) -> Optional[Observations]:
+        current_state = self.get_agent_state()
+        if position is None or rotation is None:
+            success = True
+        else:
+            success = self.set_agent_state(
+                position, rotation, reset_sensors=False
+            )
+
+        if success:
+            sim_obs = self.get_sensor_observations()
+
+            self._prev_sim_obs.update(sim_obs)
+
+            observations = self._sensor_suite.get_observations(sim_obs)
+            if not keep_agent_at_new_pose:
+                self.set_agent_state(
+                    current_state.position,
+                    current_state.rotation,
+                    reset_sensors=False,
+                )
+            return observations
+        else:
+            return None

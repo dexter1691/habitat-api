@@ -14,6 +14,7 @@ from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.actions import (
     HabitatSimActions,
     HabitatSimV1ActionSpaceConfiguration,
+    HabitatSimPyRobotActionSpaceConfiguration
 )
 from habitat_sim.agent.controls.controls import ActuationSpec
 
@@ -59,6 +60,31 @@ class GrabReleaseActuationSpec(ActuationSpec):
 @registry.register_action_space_configuration(name="RearrangementActions-v0")
 class RearrangementSimV0ActionSpaceConfiguration(
     HabitatSimV1ActionSpaceConfiguration
+):
+    def __init__(self, config):
+        super().__init__(config)
+        if not HabitatSimActions.has_action("GRAB_RELEASE"):
+            HabitatSimActions.extend_action_space("GRAB_RELEASE")
+
+    def get(self):
+        config = super().get()
+        new_config = {
+            HabitatSimActions.GRAB_RELEASE: habitat_sim.ActionSpec(
+                "grab_or_release_object_under_crosshair",
+                GrabReleaseActuationSpec(
+                    visual_sensor_name=self.config.VISUAL_SENSOR,
+                    crosshair_pos=self.config.CROSSHAIR_POS,
+                    amount=self.config.GRAB_DISTANCE,
+                ),
+            )
+        }
+        config.update(new_config)
+
+        return config
+
+@registry.register_action_space_configuration(name="RearrangementActionsNoisy-v0")
+class RearrangementSimV0ActionSpaceConfiguration(
+    HabitatSimPyRobotActionSpaceConfiguration
 ):
     def __init__(self, config):
         super().__init__(config)
