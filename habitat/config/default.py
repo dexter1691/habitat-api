@@ -313,6 +313,16 @@ _C.SIMULATOR.AGENT_0.IS_SET_START_STATE = False
 _C.SIMULATOR.AGENT_0.START_POSITION = [0, 0, 0]
 _C.SIMULATOR.AGENT_0.START_ROTATION = [0, 0, 0, 1]
 _C.SIMULATOR.AGENTS = ["AGENT_0"]
+
+# -----------------------------------------------------------------------------
+# # SIMULATOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.ACTION_SPACE_CONFIG = "pyrobotnoisy"
+_C.SIMULATOR.NOISE_MODEL = CN()
+_C.SIMULATOR.NOISE_MODEL.ROBOT = "LoCoBot"
+_C.SIMULATOR.NOISE_MODEL.CONTROLLER = "ILQR"
+_C.SIMULATOR.NOISE_MODEL.NOISE_MULTIPLIER = 1.0
+
 # -----------------------------------------------------------------------------
 # SIMULATOR HABITAT_SIM_V0
 # -----------------------------------------------------------------------------
